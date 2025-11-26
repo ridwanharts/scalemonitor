@@ -87,6 +87,7 @@ public class ScaleController {
             });
         }, error -> {
             Platform.runLater(() -> status("Error: " + error));
+            System.err.println("Serial error: " + error);
         });
 
         btnDisconnect.setDisable(false);

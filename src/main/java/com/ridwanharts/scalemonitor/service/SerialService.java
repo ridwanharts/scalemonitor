@@ -5,9 +5,15 @@
 package com.ridwanharts.scalemonitor.service;
 
 import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPortEvent;
+import com.ridwanharts.scalemonitor.util.ScaleFrameParser;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -18,7 +24,9 @@ import java.util.function.Consumer;
 public class SerialService {
 
     private SerialPort activePort;
-    private Thread readerThread;
+    private SerialPortDataListener dataListener;
+    private final StringBuilder sb = new StringBuilder();
+    private ScaleFrameParser parser; // integrate the fixed-frame parser
 
     public List<String> listPorts() {
         List<String> list = new ArrayList<>();
@@ -36,7 +44,9 @@ public class SerialService {
         port.setNumDataBits(8);
         port.setNumStopBits(SerialPort.ONE_STOP_BIT);
         port.setParity(SerialPort.NO_PARITY);
-        port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 200, 0);
+
+        // Use event-driven reads (no read timeout dependency)
+        port.setComPortTimeouts(SerialPort.TIMEOUT_NONBLOCKING, 0, 0);
 
         if (!port.openPort()) {
             onError.accept("Unable to open port " + portName);
@@ -44,51 +54,71 @@ public class SerialService {
         }
 
         activePort = port;
+        parser = new ScaleFrameParser(); // new parser instance for this session
 
-        readerThread = new Thread(() -> {
-            try (InputStream in = port.getInputStream()) {
-                StringBuilder sb = new StringBuilder();
-                int b;
-                while (port.isOpen() && (b = in.read()) != -1) {
-                    char ch = (char) b;
-                    // build line until newline
-                    if (ch == '\n') {
-                        String line = sb.toString().replace("\r", "");
-                        sb.setLength(0);
-                        onData.accept(line);
-                    } else {
-                        sb.append(ch);
-                    }
-                }
-            } catch (IOException ex) {
-                onError.accept(ex.getMessage());
-            } finally {
-                close();
+        dataListener = new SerialPortDataListener() {
+            @Override
+            public int getListeningEvents() {
+                return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
             }
-        }, "Serial-Reader-" + portName);
 
-        readerThread.setDaemon(true);
-        readerThread.start();
+            @Override
+            public void serialEvent(SerialPortEvent event) {
+                if (event.getEventType() != SerialPort.LISTENING_EVENT_DATA_AVAILABLE) return;
+                try {
+                    int available = port.bytesAvailable();
+                    if (available <= 0) return;
+                    byte[] buffer = new byte[available];
+                    int read = port.readBytes(buffer, buffer.length);
+                    if (read > 0) {
+//                        String chunk = new String(buffer, 0, read, StandardCharsets.UTF_8);
+//                        synchronized (sb) {
+//                            for (char ch : chunk.toCharArray()) {
+//                                if (ch == '\n') {
+//                                    String line = sb.toString().replace("\r", "");
+//                                    sb.setLength(0);
+//                                    onData.accept(line);
+//                                } else {
+//                                    sb.append(ch);
+//                                }
+//                            }
+//                        }
+                        // Feed only the bytes actually read to the ScaleFrameParser
+                        byte[] chunk = (read == buffer.length) ? buffer : Arrays.copyOf(buffer, read);
+                        parser.feed(chunk, onData, onError);
+                    }
+                } catch (Exception ex) {
+                    onError.accept(ex.getMessage());
+                }
+            }
+        };
+
+        port.addDataListener(dataListener);
     }
 
     public void close() {
         try {
-            if (activePort != null && activePort.isOpen()) {
-                activePort.closePort();
+            if (activePort != null) {
+                if (dataListener != null) {
+                    activePort.removeDataListener();
+                    dataListener = null;
+                }
+                if (activePort.isOpen()) {
+                    activePort.closePort();
+                }
             }
         } catch (Exception ignored) {}
         activePort = null;
-
-        if (readerThread != null && readerThread.isAlive()) {
-            readerThread.interrupt();
-        }
-        readerThread = null;
+        parser = null;
+//        synchronized (sb) {
+//            sb.setLength(0);
+//        }
     }
 
     public boolean send(String text) {
         if (activePort == null || !activePort.isOpen()) return false;
         try {
-            activePort.getOutputStream().write(text.getBytes());
+            activePort.getOutputStream().write(text.getBytes(StandardCharsets.UTF_8));
             activePort.getOutputStream().flush();
             return true;
         } catch (Exception e) {
