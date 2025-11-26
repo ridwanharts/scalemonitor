@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.ridwanharts.scalemonitor.controller.ScaleController">
+   <children>
+      <BorderPane AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="10.0">
+          <top>
+              <HBox alignment="CENTER_LEFT" spacing="12">
+                  <Label text="Baud:" />
+                  <ComboBox fx:id="baudBox" prefWidth="110" />
+                  <Label text="Port:" />
+                  <ComboBox fx:id="portBox" prefWidth="140" />
+                  <Button fx:id="btnRefresh" text="Refresh" />
+                  <Button fx:id="btnConnect" text="Connect" />
+                  <Button fx:id="btnDisconnect" disable="true" text="Disconnect" />
+              </HBox>
+          </top>
+      
+          <center>
+              <VBox spacing="12">
+                  <Label fx:id="weightLabel" text="Live Weight" />
+                  <HBox spacing="12">
+                      <VBox spacing="6" HBox.hgrow="ALWAYS">
+                          <Label text="Raw Data" />
+                          <TextArea fx:id="rawArea" editable="false" prefRowCount="6" wrapText="false" />
+                          <Button fx:id="btnClear" text="Clear" />
+                      </VBox>
+      
+                      <VBox prefWidth="220" spacing="6">
+                          <Label text="Settings" />
+                          <CheckBox fx:id="chkCR" text="Append CR" />
+                          <CheckBox fx:id="chkLF" text="Append LF" />
+                          <Label text="Data Format" />
+                          <ChoiceBox fx:id="formatChoice" />
+                          <Region />
+                      </VBox>
+                  </HBox>
+               <BorderPane.margin>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </BorderPane.margin>
+              </VBox>
+          </center>
+      
+          <bottom>
+              <HBox alignment="CENTER_LEFT" spacing="8">
+                  <Label text="Status:" />
+                  <Label fx:id="statusLabel" styleClass="status" text="Ready" />
+              </HBox>
+          </bottom>
+      </BorderPane>
+   </children>
+</AnchorPane>
