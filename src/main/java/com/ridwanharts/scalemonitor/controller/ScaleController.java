@@ -33,6 +33,7 @@ public class ScaleController {
     @FXML private CheckBox chkCR;
     @FXML private CheckBox chkLF;
     @FXML private ChoiceBox<String> formatChoice;
+    @FXML private ComboBox<String> parseModeBox;
     @FXML private Button btnClear;
 
     private SerialService serialService;
@@ -48,6 +49,11 @@ public class ScaleController {
 
         formatChoice.getItems().addAll("8N1");
         formatChoice.setValue("8N1");
+
+        // fill parse mode options
+        parseModeBox.getItems().addAll("RAW_DEBUG", "LINE_BASED", "FRAME_PARSER");
+        parseModeBox.setValue("RAW_DEBUG");
+        parseModeBox.setOnAction(e -> changeParseModeFromUI());
 
         updatePorts();
 
@@ -99,6 +105,19 @@ public class ScaleController {
         btnConnect.setDisable(false);
         btnDisconnect.setDisable(true);
         status("Disconnected");
+    }
+
+    private void changeParseModeFromUI() {
+        String selectedMode = parseModeBox.getValue();
+        if (selectedMode != null) {
+            try {
+                SerialService.ParseMode mode = SerialService.ParseMode.valueOf(selectedMode);
+                serialService.setParseMode(mode);
+                status("Parse mode changed to: " + selectedMode);
+            } catch (IllegalArgumentException ex) {
+                status("Invalid parse mode: " + selectedMode);
+            }
+        }
     }
 
     private void status(String text) {
