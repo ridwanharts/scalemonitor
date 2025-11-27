@@ -25,6 +25,7 @@
                   <Button fx:id="btnRefresh" text="Refresh" />
                   <Button fx:id="btnConnect" text="Connect" />
                   <Button fx:id="btnDisconnect" disable="true" text="Disconnect" />
+               <ComboBox fx:id="parseModeBox" prefWidth="150.0" promptText="Parse Mode" />
               </HBox>
           </top>
       
